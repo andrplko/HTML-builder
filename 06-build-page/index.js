@@ -3,6 +3,8 @@ const path = require('path');
 const { mkdir } = require('fs/promises');
 const { readdir } = require('fs/promises');
 const { copyFile } = require('fs/promises');
+const { readFile } = require('fs/promises');
+const { writeFile } = require('fs/promises');
 const stylesPathDir = path.join(__dirname, 'styles');
 const assetsPathDir = path.join(__dirname, 'assets');
 const componentsPathDir = path.join(__dirname, 'components');
@@ -61,18 +63,15 @@ mergeStyles();
 async function createMarkupFile() {
   try {
     let replacedFile;
-    const templateReadStream = fs.createReadStream(path.join(templatePathFile)).setEncoding('utf8');
-    templateReadStream.on('data', data => {
-      replacedFile = data;
-    })
-    let components = await readdir(componentsPathDir, { withFileTypes: true });
-    for (let component of components) {
-      let componentName = path.basename(path.join(__dirname, component.name), '.html');
-      let componentReadStream = fs.createReadStream(path.join(componentsPathDir, component.name)).setEncoding('utf8');
-      componentReadStream.on('data', data => {
-        replacedFile = replacedFile.replace(new RegExp(`{{${componentName}}}`), data);
-        fs.createWriteStream(path.join(__dirname, 'project-dist', 'index.html')).write(replacedFile + '\n');
-      })
+    const files = await readdir(componentsPathDir, { withFileTypes: true });
+    const templateRead = await readFile(templatePathFile, 'utf-8');
+    replacedFile = templateRead;
+
+    for (let file of files) {
+      let componentName = path.basename(path.join(__dirname, file.name), '.html');
+      let componentRead = await readFile(path.join(componentsPathDir, file.name), 'utf-8');
+      replacedFile = replacedFile.replace(new RegExp(`{{${componentName}}}`), componentRead);
+      await writeFile(path.join(__dirname, 'project-dist', 'index.html'), replacedFile);
     }
     console.log('HTML file successfully created!');
   } catch (err) {
